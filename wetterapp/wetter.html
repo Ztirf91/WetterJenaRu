@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root {
       color-scheme: light;
@@ -128,6 +129,36 @@
     .forecast-temps { flex: 0 0 auto; color: var(--ink); font-family: var(--mono); font-size: 10px; }
     .forecast-temps strong { font-weight: 500; }
 
+    .radar-section { margin-top: 42px; }
+    .radar-section .section-heading { margin-top: 0; }
+    .radar-intro { max-width: 580px; margin: -3px 0 13px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .radar-play-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 600; }
+    .radar-play-button:hover { border-color: #aab6ac; }
+    .radar-play-button:disabled { cursor: not-allowed; opacity: .55; }
+    .radar-play-button svg { width: 13px; height: 13px; fill: currentColor; }
+    .radar-map-shell { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #e9eee8; }
+    .radar-map { width: 100%; height: 390px; background: #e9eee8; }
+    .radar-map-status { position: absolute; z-index: 500; top: 12px; left: 12px; max-width: calc(100% - 24px); padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--muted); font-size: 10px; box-shadow: 0 1px 4px #202a2614; }
+    .radar-map-status[hidden] { display: none; }
+    .radar-city-pin { width: 15px; height: 15px; display: block; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 1px 5px #17251f80; }
+    .radar-city-pin.jena { background: var(--green); }
+    .radar-city-pin.rudolstadt { background: var(--blue); }
+    .radar-map .leaflet-control-attribution { font-family: var(--mono); font-size: 8px; }
+    .radar-controls { padding: 13px 14px 10px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 4px 4px; background: var(--white); }
+    .radar-controls-top, .radar-control-labels { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .radar-controls-top { margin-bottom: 7px; }
+    .radar-controls-top span:first-child { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .radar-controls-top strong { color: var(--ink); font-family: var(--mono); font-size: 10px; font-weight: 500; }
+    .radar-timeline { display: block; width: 100%; height: 16px; margin: 0; accent-color: var(--green); cursor: pointer; }
+    .radar-control-labels { color: var(--muted); font-family: var(--mono); font-size: 8px; }
+    .radar-meta { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 11px; }
+    .radar-city-legend { display: flex; align-items: center; gap: 15px; }
+    .radar-city-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
+    .radar-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .radar-city-legend span:last-child .radar-legend-dot { background: var(--blue); }
+    .radar-source { color: var(--muted); font-family: var(--mono); font-size: 8px; }
+    .radar-source a { color: var(--green); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
     .footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 35px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 9px; }
     .footer a { color: var(--green); text-decoration-thickness: 1px; text-underline-offset: 2px; }
     .error-message { grid-column: 1 / -1; margin: 0; padding: 30px 20px; border: 1px solid #e9c3b7; border-radius: 4px; background: #fff8f5; color: #884932; font-size: 12px; line-height: 1.6; }
@@ -142,6 +173,8 @@
       .city-grid { grid-template-columns: 1fr; gap: 11px; }
       .city-panel { padding: 20px; }
       .section-heading { margin-top: 34px; }
+      .radar-section { margin-top: 34px; }
+      .radar-map { height: 340px; }
     }
 
     @media (max-width: 480px) {
@@ -162,6 +195,11 @@
       .forecast-city { gap: 4px; font-size: 9px; }
       .forecast-temps { font-size: 9px; }
       .footer { flex-direction: column; gap: 7px; }
+      .radar-section { margin-top: 30px; }
+      .radar-map { height: 300px; }
+      .radar-meta { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .radar-city-legend { gap: 12px; }
+      .radar-source { line-height: 1.5; }
     }
   </style>
 </head>
@@ -179,7 +217,6 @@
     <main>
       <section class="intro" aria-labelledby="page-title">
         <div>
-          <p class="eyebrow">Dein Wetter zwischen Saale und Heide</p>
           <h1 id="page-title">Wetter an der Saale</h1>
           <p class="intro-copy">Zwei Städte, ein Fluss. Aktuelle Bedingungen und der Blick auf die kommenden Tage.</p>
         </div>
@@ -235,6 +272,33 @@
         </article>
       </section>
 
+      <section class="radar-section" aria-labelledby="radar-title">
+        <div class="section-heading">
+          <div><p class="section-kicker">Niederschlag in Bewegung</p><h2 id="radar-title">Regenradar</h2></div>
+          <button class="radar-play-button" id="radar-play" type="button" disabled aria-label="Radarverlauf abspielen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path id="radar-play-icon" d="M8 5v14l11-7z"/></svg>
+            <span id="radar-play-label">Abspielen</span>
+          </button>
+        </div>
+        <p class="radar-intro">Beobachte die Niederschlagsbewegung der letzten zwei Stunden über Jena und Rudolstadt.</p>
+        <div class="radar-map-shell">
+          <div class="radar-map" id="radar-map" role="region" aria-label="Regenradar-Karte für Jena und Rudolstadt"></div>
+          <div class="radar-map-status" id="radar-status" role="status" aria-live="polite">Radar wird geladen …</div>
+        </div>
+        <div class="radar-controls">
+          <div class="radar-controls-top"><span>RADARZEITPUNKT</span><strong id="radar-time">Wird geladen …</strong></div>
+          <input class="radar-timeline" id="radar-timeline" type="range" min="0" max="0" value="0" step="1" aria-label="Zeitpunkt des Regenradars" disabled>
+          <div class="radar-control-labels"><span>Ältester Frame</span><span>Neuester Frame</span></div>
+          <div class="radar-meta">
+            <div class="radar-city-legend" aria-label="Kartenmarkierungen">
+              <span><i class="radar-legend-dot" aria-hidden="true"></i>Jena</span>
+              <span><i class="radar-legend-dot" aria-hidden="true"></i>Rudolstadt</span>
+            </div>
+            <span class="radar-source">Karte © OpenStreetMap-Mitwirkende · Radar <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a></span>
+          </div>
+        </div>
+      </section>
+
       <section aria-labelledby="forecast-title">
         <div class="section-heading">
           <div><p class="section-kicker">Der Blick nach vorn</p><h2 id="forecast-title">Die nächsten fünf Tage</h2></div>
@@ -250,6 +314,7 @@
     <footer class="footer"><span id="updated-at">Wetterdaten · Open-Meteo</span><span>Prognosen von <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a></span></footer>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const cities = [
       { id: "jena", name: "Jena", latitude: 50.9271, longitude: 11.5892 },
@@ -267,6 +332,12 @@
     };
     let unit = "C";
     let latestWeather = {};
+    let radarMap = null;
+    let radarLayer = null;
+    let radarFrames = [];
+    let radarIndex = 0;
+    let radarPlayback = null;
+    let radarHost = "";
     const liveStatus = document.querySelector("#live-status");
     const refreshButton = document.querySelector("#refresh-button");
 
@@ -384,6 +455,123 @@
       refreshButton.disabled = false;
     }
 
+    function setRadarStatus(message, hidden = false) {
+      const status = document.querySelector("#radar-status");
+      status.textContent = message;
+      status.hidden = hidden;
+    }
+
+    function setRadarFrame(index) {
+      const frame = radarFrames[index];
+      if (!frame || !radarMap) return;
+
+      radarIndex = index;
+      document.querySelector("#radar-timeline").value = String(index);
+      document.querySelector("#radar-time").textContent = new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin"
+      }).format(new Date(frame.time * 1000)) + " Uhr";
+      setRadarStatus(`Radarbild · ${new Intl.DateTimeFormat("de-DE", {
+        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin"
+      }).format(new Date(frame.time * 1000))} Uhr`);
+
+      const tileUrl = `${radarHost}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
+      if (radarLayer) {
+        radarLayer.setUrl(tileUrl);
+      } else {
+        radarLayer = L.tileLayer(tileUrl, {
+          opacity: 0.72,
+          maxNativeZoom: 7,
+          maxZoom: 18,
+          zIndex: 10,
+          attribution: '<a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a>'
+        }).addTo(radarMap);
+      }
+    }
+
+    async function loadRadarFrames() {
+      if (!radarMap) return;
+      try {
+        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        if (!response.ok) throw new Error(`Radar-API antwortet mit Status ${response.status}.`);
+        const data = await response.json();
+        const frames = data.radar?.past;
+        if (!data.host || !Array.isArray(frames) || frames.length === 0) {
+          throw new Error("Der Radardienst hat keine aktuellen Aufnahmen geliefert.");
+        }
+
+        radarHost = data.host;
+        radarFrames = frames;
+        const timeline = document.querySelector("#radar-timeline");
+        timeline.max = String(frames.length - 1);
+        timeline.disabled = false;
+        document.querySelector("#radar-play").disabled = frames.length < 2;
+        setRadarFrame(frames.length - 1);
+      } catch (error) {
+        setRadarStatus("Regenradar gerade nicht verfügbar. Bitte später erneut versuchen.");
+      }
+    }
+
+    function initializeRadarMap() {
+      if (!window.L) {
+        setRadarStatus("Die Kartenbibliothek konnte nicht geladen werden.");
+        return;
+      }
+
+      radarMap = L.map("radar-map", { scrollWheelZoom: false, minZoom: 6, maxZoom: 18 });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>'
+      }).addTo(radarMap);
+
+      const cityBounds = L.latLngBounds(cities.map((city) => [city.latitude, city.longitude]));
+      cities.forEach((city) => {
+        const marker = L.marker([city.latitude, city.longitude], {
+          title: city.name,
+          alt: city.name,
+          icon: L.divIcon({
+            className: "",
+            html: `<span class="radar-city-pin ${city.id}"></span>`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+          })
+        }).addTo(radarMap);
+        marker.bindPopup(() => {
+          const current = latestWeather[city.id]?.current;
+          const details = current
+            ? `${temperature(current.temperature_2m)} · ${weatherInfo(current.weather_code)[0]}`
+            : "Wetterdaten werden geladen …";
+          return `<strong>${city.name}</strong><br>${details}`;
+        });
+      });
+      radarMap.fitBounds(cityBounds.pad(1.25), { padding: [30, 30], maxZoom: 9 });
+      loadRadarFrames();
+    }
+
+    document.querySelector("#radar-timeline").addEventListener("input", (event) => {
+      setRadarFrame(Number(event.target.value));
+    });
+    document.querySelector("#radar-play").addEventListener("click", (event) => {
+      const button = event.currentTarget;
+      const icon = document.querySelector("#radar-play-icon");
+      const label = document.querySelector("#radar-play-label");
+      if (radarPlayback) {
+        window.clearInterval(radarPlayback);
+        radarPlayback = null;
+        icon.setAttribute("d", "M8 5v14l11-7z");
+        label.textContent = "Abspielen";
+        button.setAttribute("aria-label", "Radarverlauf abspielen");
+        button.setAttribute("aria-pressed", "false");
+      } else if (radarFrames.length > 1) {
+        radarPlayback = window.setInterval(() => {
+          setRadarFrame((radarIndex + 1) % radarFrames.length);
+        }, 800);
+        icon.setAttribute("d", "M7 5h4v14H7z M15 5h4v14h-4z");
+        label.textContent = "Pause";
+        button.setAttribute("aria-label", "Radarverlauf pausieren");
+        button.setAttribute("aria-pressed", "true");
+      }
+    });
+
     document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("de-DE", {
       weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin"
     }).format(new Date());
@@ -395,7 +583,12 @@
         renderAll();
       });
     });
-    refreshButton.addEventListener("click", loadWeather);
+    refreshButton.addEventListener("click", () => {
+      loadWeather();
+      loadRadarFrames();
+    });
+    initializeRadarMap();
+    window.setInterval(loadRadarFrames, 10 * 60 * 1000);
     loadWeather();
   </script>
 </body>
