@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f4ee">
+  <title>Wetter an der Saale | Jena &amp; Rudolstadt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f4ee;
+      --white: #fff;
+      --ink: #202a26;
+      --muted: #727b74;
+      --line: #dfe3db;
+      --green: #244c3d;
+      --green-soft: #eaf0e7;
+      --orange: #dc6b45;
+      --blue: #436b91;
+      --blue-soft: #eaf0f5;
+      --mono: "DM Mono", monospace;
+      --sans: "DM Sans", sans-serif;
+      --serif: "Newsreader", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; }
+
+    .page { max-width: 1160px; margin: 0 auto; padding: 0 42px 64px; }
+
+    .topbar {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; color: var(--green); }
+    .brand-mark { display: grid; grid-template-columns: 8px 8px; gap: 3px; transform: rotate(-12deg); }
+    .brand-mark i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .brand-mark i:nth-child(2) { background: var(--orange); }
+    .brand-mark i:nth-child(3) { background: var(--blue); }
+    .brand-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
+    .brand-place { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+
+    .live-indicator { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4a9467; box-shadow: 0 0 0 3px #e1eee3; }
+
+    .intro { padding: 55px 0 27px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+    .eyebrow { margin: 0 0 11px; color: var(--green); font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
+    h1 { margin: 0; font-family: var(--serif); font-size: 52px; font-weight: 500; line-height: 1; letter-spacing: 0; }
+    .intro-copy { max-width: 300px; margin: 15px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+    .toolbar { display: flex; align-items: center; gap: 10px; padding-bottom: 4px; flex-shrink: 0; }
+    .unit-switch { display: inline-flex; padding: 3px; background: #e8eae3; border-radius: 5px; }
+    .unit-button { min-width: 37px; min-height: 31px; padding: 0 8px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); cursor: pointer; font-family: var(--mono); font-size: 12px; }
+    .unit-button[aria-pressed="true"] { background: var(--white); color: var(--ink); box-shadow: 0 1px 3px #202a261c; }
+    .refresh-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 37px; padding: 0 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 600; }
+    .refresh-button:hover { border-color: #aab6ac; }
+    .refresh-button:disabled { cursor: wait; opacity: .65; }
+    .refresh-button svg { width: 14px; height: 14px; }
+
+    .date-line { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 13px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+    .date-line strong { color: var(--ink); font-weight: 500; }
+    .city-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+    .city-panel { min-width: 0; padding: 23px 24px 19px; background: var(--white); border: 1px solid var(--line); border-top: 3px solid var(--green); border-radius: 4px; }
+    .city-panel[data-city="rudolstadt"] { border-top-color: var(--blue); }
+    .city-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .city-name { margin: 0; font-family: var(--serif); font-size: 29px; font-weight: 500; line-height: 1.05; }
+    .city-area { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+    .city-number { color: var(--green); font-family: var(--mono); font-size: 10px; }
+    [data-city="rudolstadt"] .city-number { color: var(--blue); }
+
+    .current-weather { min-height: 139px; display: flex; align-items: center; gap: 20px; padding: 20px 0 16px; border-bottom: 1px solid var(--line); }
+    .weather-symbol { width: 82px; height: 82px; flex: 0 0 82px; display: grid; place-items: center; border-radius: 50%; background: var(--green-soft); color: var(--green); font-family: var(--serif); font-size: 45px; line-height: 1; }
+    [data-city="rudolstadt"] .weather-symbol { background: var(--blue-soft); color: var(--blue); }
+    .temp-line { display: flex; align-items: start; gap: 5px; }
+    .temperature { font-family: var(--serif); font-size: 65px; line-height: .9; letter-spacing: 0; }
+    .degree { padding-top: 5px; font-family: var(--mono); font-size: 15px; }
+    .condition { margin: 9px 0 0; font-size: 12px; font-weight: 600; }
+    .feels-like { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 14px 0 15px; border-bottom: 1px solid var(--line); }
+    .stat + .stat { padding-left: 13px; border-left: 1px solid var(--line); }
+    .stat-label { display: block; margin-bottom: 5px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .stat-value { font-size: 12px; font-weight: 600; }
+
+    .hourly-title { display: flex; justify-content: space-between; gap: 10px; padding: 14px 0 10px; }
+    .hourly-title span:first-child { font-size: 10px; font-weight: 700; }
+    .hourly-title span:last-child { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .hourly-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+    .hour-item { min-width: 0; padding: 9px 4px 8px; text-align: center; background: #f7f8f4; border-radius: 3px; }
+    .hour-time { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .hour-symbol { margin: 7px 0 5px; color: var(--green); font-size: 15px; line-height: 1; }
+    [data-city="rudolstadt"] .hour-symbol { color: var(--blue); }
+    .hour-temp { font-size: 11px; font-weight: 700; }
+    .hour-rain { min-height: 12px; margin-top: 5px; color: var(--blue); font-family: var(--mono); font-size: 8px; }
+
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin: 42px 0 12px; }
+    .section-kicker { margin: 0 0 5px; color: var(--orange); font-family: var(--mono); font-size: 9px; text-transform: uppercase; }
+    h2 { margin: 0; font-family: var(--serif); font-size: 27px; font-weight: 500; line-height: 1.1; }
+    .forecast-note { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .forecast-table { border-top: 1px solid var(--line); }
+    .forecast-header, .forecast-row { display: grid; grid-template-columns: minmax(110px, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px; }
+    .forecast-header { min-height: 36px; color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .forecast-header span:nth-child(2) { color: var(--green); }
+    .forecast-header span:nth-child(3) { color: var(--blue); }
+    .forecast-row { min-height: 45px; border-top: 1px solid var(--line); }
+    .forecast-day { font-size: 11px; font-weight: 600; text-transform: capitalize; }
+    .forecast-city { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 10px; }
+    .forecast-condition { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+    .forecast-icon { color: var(--orange); font-size: 14px; }
+    .forecast-city[data-city="rudolstadt"] .forecast-icon { color: var(--blue); }
+    .forecast-temps { flex: 0 0 auto; color: var(--ink); font-family: var(--mono); font-size: 10px; }
+    .forecast-temps strong { font-weight: 500; }
+
+    .footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 35px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .footer a { color: var(--green); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .error-message { grid-column: 1 / -1; margin: 0; padding: 30px 20px; border: 1px solid #e9c3b7; border-radius: 4px; background: #fff8f5; color: #884932; font-size: 12px; line-height: 1.6; }
+    .loading { animation: breathe 1.2s ease-in-out infinite alternate; }
+    @keyframes breathe { to { opacity: .55; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+
+    @media (max-width: 760px) {
+      .page { padding: 0 20px 42px; }
+      .intro { padding-top: 42px; }
+      h1 { font-size: 44px; }
+      .city-grid { grid-template-columns: 1fr; gap: 11px; }
+      .city-panel { padding: 20px; }
+      .section-heading { margin-top: 34px; }
+    }
+
+    @media (max-width: 480px) {
+      .page { padding-right: 15px; padding-left: 15px; }
+      .topbar { min-height: 60px; }
+      .brand-place { display: none; }
+      .intro { display: block; padding: 35px 0 19px; }
+      h1 { font-size: 40px; }
+      .intro-copy { max-width: 270px; margin-top: 10px; }
+      .toolbar { margin-top: 20px; }
+      .date-line { align-items: start; font-size: 9px; }
+      .city-panel { padding: 18px 16px 15px; }
+      .temperature { font-size: 60px; }
+      .weather-symbol { width: 72px; height: 72px; flex-basis: 72px; font-size: 40px; }
+      .current-weather { gap: 16px; }
+      .forecast-header, .forecast-row { grid-template-columns: minmax(83px, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 7px; }
+      .forecast-condition { gap: 5px; }
+      .forecast-city { gap: 4px; font-size: 9px; }
+      .forecast-temps { font-size: 9px; }
+      .footer { flex-direction: column; gap: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand" aria-label="Saale Wetter">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="brand-name">SAALWETTER</span>
+        <span class="brand-place">THÜRINGEN · DE</span>
+      </div>
+      <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Dein Wetter zwischen Saale und Heide</p>
+          <h1 id="page-title">Wetter an der Saale</h1>
+          <p class="intro-copy">Zwei Städte, ein Fluss. Aktuelle Bedingungen und der Blick auf die kommenden Tage.</p>
+        </div>
+        <div class="toolbar" aria-label="Anzeigeoptionen">
+          <div class="unit-switch" role="group" aria-label="Temperatureinheit">
+            <button class="unit-button" type="button" data-unit="C" aria-pressed="true">°C</button>
+            <button class="unit-button" type="button" data-unit="F" aria-pressed="false">°F</button>
+          </div>
+          <button class="refresh-button" id="refresh-button" type="button" aria-label="Wetterdaten aktualisieren">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4.6 9a8 8 0 0 1 13.2-2L20 12M4 17v-5h5m10.4 3a8 8 0 0 1-13.2 2L4 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Aktualisieren
+          </button>
+        </div>
+      </section>
+
+      <div class="date-line"><strong id="today-label">Heute</strong><span>ZEITZONE EUROPA / BERLIN</span></div>
+
+      <section class="city-grid" aria-label="Aktuelles Wetter in Jena und Rudolstadt">
+        <article class="city-panel loading" data-city="jena" aria-labelledby="jena-name" aria-busy="true">
+          <div class="city-heading">
+            <div><h2 class="city-name" id="jena-name">Jena</h2><p class="city-area">Lichtstadt · Mittleres Saaletal</p></div>
+            <span class="city-number">50°56′ N<br>11°35′ E</span>
+          </div>
+          <div class="current-weather">
+            <div class="weather-symbol" data-field="symbol" aria-hidden="true">·</div>
+            <div><div class="temp-line"><span class="temperature" data-field="temperature">--</span><span class="degree" data-field="degree">°C</span></div><p class="condition" data-field="condition">Wird geladen …</p><p class="feels-like" data-field="feels">Gefühlt wie --°</p></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">HEUTE MAX / MIN</span><span class="stat-value" data-field="range">-- / --</span></div>
+            <div class="stat"><span class="stat-label">WIND</span><span class="stat-value" data-field="wind">--</span></div>
+            <div class="stat"><span class="stat-label">LUFTFEUCHTE</span><span class="stat-value" data-field="humidity">--</span></div>
+          </div>
+          <div class="hourly-title"><span>Stundenverlauf</span><span>NÄCHSTE STUNDEN</span></div>
+          <div class="hourly-list" data-field="hourly"><div class="hour-item">Lädt …</div></div>
+        </article>
+
+        <article class="city-panel loading" data-city="rudolstadt" aria-labelledby="rudolstadt-name" aria-busy="true">
+          <div class="city-heading">
+            <div><h2 class="city-name" id="rudolstadt-name">Rudolstadt</h2><p class="city-area">Schillerstadt · Oberes Saaletal</p></div>
+            <span class="city-number">50°43′ N<br>11°20′ E</span>
+          </div>
+          <div class="current-weather">
+            <div class="weather-symbol" data-field="symbol" aria-hidden="true">·</div>
+            <div><div class="temp-line"><span class="temperature" data-field="temperature">--</span><span class="degree" data-field="degree">°C</span></div><p class="condition" data-field="condition">Wird geladen …</p><p class="feels-like" data-field="feels">Gefühlt wie --°</p></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">HEUTE MAX / MIN</span><span class="stat-value" data-field="range">-- / --</span></div>
+            <div class="stat"><span class="stat-label">WIND</span><span class="stat-value" data-field="wind">--</span></div>
+            <div class="stat"><span class="stat-label">LUFTFEUCHTE</span><span class="stat-value" data-field="humidity">--</span></div>
+          </div>
+          <div class="hourly-title"><span>Stundenverlauf</span><span>NÄCHSTE STUNDEN</span></div>
+          <div class="hourly-list" data-field="hourly"><div class="hour-item">Lädt …</div></div>
+        </article>
+      </section>
+
+      <section aria-labelledby="forecast-title">
+        <div class="section-heading">
+          <div><p class="section-kicker">Der Blick nach vorn</p><h2 id="forecast-title">Die nächsten fünf Tage</h2></div>
+          <span class="forecast-note">TAGESHÖCHST- / TIEFSTWERTE</span>
+        </div>
+        <div class="forecast-table" id="forecast-table" aria-live="polite">
+          <div class="forecast-header"><span>TAG</span><span>JENA</span><span>RUDOLSTADT</span></div>
+          <p class="error-message">Die Vorhersage wird geladen …</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><span id="updated-at">Wetterdaten · Open-Meteo</span><span>Prognosen von <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a></span></footer>
+  </div>
+
+  <script>
+    const cities = [
+      { id: "jena", name: "Jena", latitude: 50.9271, longitude: 11.5892 },
+      { id: "rudolstadt", name: "Rudolstadt", latitude: 50.7204, longitude: 11.3403 }
+    ];
+    const weatherDescriptions = {
+      0: ["Sonnig", "☀"], 1: ["Überwiegend heiter", "☀"], 2: ["Leicht bewölkt", "◐"], 3: ["Bedeckt", "☁"],
+      45: ["Neblig", "≋"], 48: ["Nebel mit Reif", "≋"], 51: ["Leichter Nieselregen", "☂"], 53: ["Nieselregen", "☂"],
+      55: ["Starker Nieselregen", "☂"], 56: ["Gefrierender Nieselregen", "❄"], 57: ["Starker gefrierender Nieselregen", "❄"],
+      61: ["Leichter Regen", "☂"], 63: ["Regen", "☂"], 65: ["Starker Regen", "☂"], 66: ["Gefrierender Regen", "❄"],
+      67: ["Starker gefrierender Regen", "❄"], 71: ["Leichter Schneefall", "❄"], 73: ["Schneefall", "❄"], 75: ["Starker Schneefall", "❄"],
+      77: ["Schneegriesel", "❄"], 80: ["Regenschauer", "☂"], 81: ["Regenschauer", "☂"], 82: ["Starke Regenschauer", "☂"],
+      85: ["Schneeschauer", "❄"], 86: ["Starke Schneeschauer", "❄"], 95: ["Gewitter", "ϟ"],
+      96: ["Gewitter mit Hagel", "ϟ"], 99: ["Starkes Gewitter mit Hagel", "ϟ"]
+    };
+    let unit = "C";
+    let latestWeather = {};
+    const liveStatus = document.querySelector("#live-status");
+    const refreshButton = document.querySelector("#refresh-button");
+
+    function weatherInfo(code) {
+      return weatherDescriptions[code] || ["Wetterlage", "☁"];
+    }
+
+    function temperature(value) {
+      const converted = unit === "F" ? (value * 9 / 5) + 32 : value;
+      return `${Math.round(converted)}°`;
+    }
+
+    function timeLabel(isoTime) {
+      return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", timeZone: "Europe/Berlin" }).format(new Date(isoTime));
+    }
+
+    function renderCity(city, data) {
+      const panel = document.querySelector(`[data-city="${city.id}"]`);
+      const current = data.current;
+      const todayIndex = 0;
+      const [condition, symbol] = weatherInfo(current.weather_code);
+      panel.querySelector('[data-field="symbol"]').textContent = symbol;
+      panel.querySelector('[data-field="temperature"]').textContent = temperature(current.temperature_2m).replace("°", "");
+      panel.querySelector('[data-field="degree"]').textContent = unit === "C" ? "°C" : "°F";
+      panel.querySelector('[data-field="condition"]').textContent = condition;
+      panel.querySelector('[data-field="feels"]').textContent = `Gefühlt wie ${temperature(current.apparent_temperature)}`;
+      panel.querySelector('[data-field="range"]').textContent = `${temperature(data.daily.temperature_2m_max[todayIndex])} / ${temperature(data.daily.temperature_2m_min[todayIndex])}`;
+      panel.querySelector('[data-field="wind"]').textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+      panel.querySelector('[data-field="humidity"]').textContent = `${current.relative_humidity_2m} %`;
+
+      const firstHour = Math.max(0, data.hourly.time.findIndex((time) => new Date(time) >= new Date(current.time)));
+      const hourlyItems = data.hourly.time.slice(firstHour, firstHour + 5).map((time, offset) => {
+        const index = firstHour + offset;
+        const [description, hourSymbol] = weatherInfo(data.hourly.weather_code[index]);
+        const rain = data.hourly.precipitation_probability[index] || 0;
+        return `<div class="hour-item" title="${description}">
+          <div class="hour-time">${timeLabel(time)}</div>
+          <div class="hour-symbol" aria-hidden="true">${hourSymbol}</div>
+          <div class="hour-temp">${temperature(data.hourly.temperature_2m[index])}</div>
+          <div class="hour-rain">${rain ? `${rain} %` : " "}</div>
+        </div>`;
+      }).join("");
+      panel.querySelector('[data-field="hourly"]').innerHTML = hourlyItems || '<div class="hour-item">Keine Stundendaten</div>';
+      panel.classList.remove("loading");
+      panel.setAttribute("aria-busy", "false");
+      renderForecast();
+    }
+
+    function renderForecast() {
+      const table = document.querySelector("#forecast-table");
+      if (!cities.every((city) => latestWeather[city.id])) return;
+      const [jena, rudolstadt] = cities.map((city) => latestWeather[city.id].daily);
+      const rows = jena.time.map((date, index) => {
+        const weekday = new Intl.DateTimeFormat("de-DE", { weekday: "long", timeZone: "Europe/Berlin" }).format(new Date(`${date}T12:00:00`));
+        const cityForecast = (daily, cityId) => {
+          const [description, icon] = weatherInfo(daily.weather_code[index]);
+          return `<div class="forecast-city" data-city="${cityId}" title="${description}">
+            <span class="forecast-condition"><span class="forecast-icon" aria-hidden="true">${icon}</span><span>${description}</span></span>
+            <span class="forecast-temps"><strong>${temperature(daily.temperature_2m_max[index])}</strong> / ${temperature(daily.temperature_2m_min[index])}</span>
+          </div>`;
+        };
+        return `<div class="forecast-row"><span class="forecast-day">${weekday}</span>${cityForecast(jena, "jena")}${cityForecast(rudolstadt, "rudolstadt")}</div>`;
+      }).join("");
+      table.innerHTML = `<div class="forecast-header"><span>TAG</span><span>JENA</span><span>RUDOLSTADT</span></div>${rows}`;
+    }
+
+    function renderAll() {
+      for (const city of cities) {
+        if (latestWeather[city.id]) renderCity(city, latestWeather[city.id]);
+      }
+    }
+
+    async function fetchCity(city) {
+      const params = new URLSearchParams({
+        latitude: city.latitude,
+        longitude: city.longitude,
+        current: "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
+        hourly: "temperature_2m,precipitation_probability,weather_code",
+        daily: "weather_code,temperature_2m_max,temperature_2m_min",
+        forecast_days: 5,
+        timezone: "Europe/Berlin",
+        wind_speed_unit: "kmh"
+      });
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+      if (!response.ok) throw new Error(`Wetterdienst antwortet mit Status ${response.status}.`);
+      return response.json();
+    }
+
+    async function loadWeather() {
+      refreshButton.disabled = true;
+      liveStatus.textContent = "Wetterdaten werden geladen";
+      const results = await Promise.allSettled(cities.map(fetchCity));
+      let errors = 0;
+      results.forEach((result, index) => {
+        const city = cities[index];
+        const panel = document.querySelector(`[data-city="${city.id}"]`);
+        if (result.status === "fulfilled") {
+          latestWeather[city.id] = result.value;
+          renderCity(city, result.value);
+        } else {
+          errors += 1;
+          panel.classList.remove("loading");
+          panel.setAttribute("aria-busy", "false");
+          panel.querySelector('[data-field="condition"]').textContent = "Daten gerade nicht verfügbar";
+        }
+      });
+      if (errors === cities.length) {
+        liveStatus.textContent = "Keine Verbindung";
+        document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Wetterdaten konnten nicht geladen werden. Bitte prüfe deine Internetverbindung und versuche es erneut.</p>';
+      } else {
+        liveStatus.textContent = errors ? "Teilweise aktualisiert" : "Live aktualisiert";
+        document.querySelector("#updated-at").textContent = `Zuletzt aktualisiert · ${new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }).format(new Date())} Uhr`;
+        if (errors) document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Vorhersage für beide Städte ist gerade nicht verfügbar.</p>';
+      }
+      refreshButton.disabled = false;
+    }
+
+    document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("de-DE", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin"
+    }).format(new Date());
+
+    document.querySelectorAll(".unit-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        unit = button.dataset.unit;
+        document.querySelectorAll(".unit-button").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+        renderAll();
+      });
+    });
+    refreshButton.addEventListener("click", loadWeather);
+    loadWeather();
+  </script>
+</body>
+</html>
