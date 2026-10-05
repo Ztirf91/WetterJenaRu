@@ -136,8 +136,9 @@
     .radar-play-button:hover { border-color: #aab6ac; }
     .radar-play-button:disabled { cursor: not-allowed; opacity: .55; }
     .radar-play-button svg { width: 13px; height: 13px; fill: currentColor; }
-    .radar-map-shell { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #e9eee8; }
-    .radar-map { width: 100%; height: 390px; background: #e9eee8; }
+    .radar-map-shell { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #f2f3f2; }
+    .radar-map { width: 100%; height: 390px; background: #f2f3f2; }
+    .radar-base-map { filter: grayscale(1); }
     .radar-map-status { position: absolute; z-index: 500; top: 12px; left: 12px; max-width: calc(100% - 24px); padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--muted); font-size: 10px; box-shadow: 0 1px 4px #202a2614; }
     .radar-map-status[hidden] { display: none; }
     .radar-city-pin { width: 15px; height: 15px; display: block; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 1px 5px #17251f80; }
@@ -156,7 +157,6 @@
     .radar-city-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
     .radar-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
     .radar-city-legend span:last-child .radar-legend-dot { background: var(--blue); }
-    .radar-cloud-time { color: var(--muted); font-family: var(--mono); font-size: 8px; }
     .radar-source { color: var(--muted); font-family: var(--mono); font-size: 8px; }
     .radar-source a { color: var(--green); text-decoration-thickness: 1px; text-underline-offset: 2px; }
 
@@ -275,15 +275,15 @@
 
       <section class="radar-section" aria-labelledby="radar-title">
         <div class="section-heading">
-          <div><p class="section-kicker">Wolken und Niederschlag in Bewegung</p><h2 id="radar-title">Wolken- &amp; Regenradar</h2></div>
+          <div><p class="section-kicker">Niederschlag in Bewegung</p><h2 id="radar-title">Regenradar</h2></div>
           <button class="radar-play-button" id="radar-play" type="button" disabled aria-label="Radarverlauf abspielen">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path id="radar-play-icon" d="M8 5v14l11-7z"/></svg>
             <span id="radar-play-label">Abspielen</span>
           </button>
         </div>
-        <p class="radar-intro">Aktuelles Satellitenbild mit sichtbaren Wolkenfeldern, dazu Regenradar für Niederschlag über Jena und Rudolstadt. Satellitenbilder werden etwa alle 15 Minuten aufgenommen; Regenradar und Wetterdaten aktualisieren sich alle 5 bis 15 Minuten.</p>
+        <p class="radar-intro">Niederschlagsradar für Jena und Rudolstadt. Farbige Flächen zeigen gemessenen Regen oder Schnee; wenn keine Flächen zu sehen sind, ist aktuell kein Niederschlag im Radar erfasst. Neue Radarbilder werden alle fünf Minuten geladen.</p>
         <div class="radar-map-shell">
-          <div class="radar-map" id="radar-map" role="region" aria-label="Aktuelles Satellitenbild und Regenradar für Jena und Rudolstadt"></div>
+          <div class="radar-map" id="radar-map" role="region" aria-label="Regenradar-Karte für Jena und Rudolstadt"></div>
           <div class="radar-map-status" id="radar-status" role="status" aria-live="polite">Radar wird geladen …</div>
         </div>
         <div class="radar-controls">
@@ -295,8 +295,7 @@
               <span><i class="radar-legend-dot" aria-hidden="true"></i>Jena</span>
               <span><i class="radar-legend-dot" aria-hidden="true"></i>Rudolstadt</span>
             </div>
-            <span class="radar-cloud-time" id="cloud-time" role="status" aria-live="polite">Satellitenbild wird geladen …</span>
-            <span class="radar-source">Karte © OpenStreetMap-Mitwirkende · Radar <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a> · Satellit <a href="https://www.eumetsat.int/" target="_blank" rel="noreferrer">EUMETSAT</a></span>
+            <span class="radar-source">Karte © OpenStreetMap-Mitwirkende · Radar <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a></span>
           </div>
         </div>
       </section>
@@ -343,8 +342,6 @@
     let radarLoading = false;
     let radarFollowingLatest = true;
     let weatherLoading = false;
-    let cloudLayer = null;
-    let cloudLoading = false;
     const liveStatus = document.querySelector("#live-status");
     const refreshButton = document.querySelector("#refresh-button");
 
@@ -501,39 +498,6 @@
       }
     }
 
-    async function updateCloudLayer() {
-      if (!cloudLayer || cloudLoading) return;
-      cloudLoading = true;
-      const cloudTime = document.querySelector("#cloud-time");
-      try {
-        const response = await fetch("https://view.eumetsat.int/geoserver/ows?service=WMS&version=1.3.0&request=GetCapabilities&namespace=msg_fes", { cache: "no-store" });
-        if (!response.ok) throw new Error(`Satelliten-Dienst antwortet mit Status ${response.status}.`);
-        const xml = new DOMParser().parseFromString(await response.text(), "application/xml");
-        if (xml.querySelector("parsererror")) throw new Error("Die Satelliten-Metadaten sind ungültig.");
-        const productLayer = Array.from(xml.getElementsByTagName("Layer")).find((layer) =>
-          Array.from(layer.children).some((child) => child.localName === "Name" && child.textContent === "msg_fes:rgb_natural")
-        );
-        const timeDimension = productLayer && Array.from(productLayer.children).find((child) =>
-          child.localName === "Dimension" && child.getAttribute("name") === "time"
-        );
-        const latestImageTime = timeDimension?.getAttribute("default");
-        if (!latestImageTime || Number.isNaN(Date.parse(latestImageTime))) {
-          throw new Error("Der Satelliten-Dienst hat keinen gültigen Aufnahmezeitpunkt geliefert.");
-        }
-
-        if (cloudLayer.wmsParams.time !== latestImageTime) cloudLayer.setParams({ time: latestImageTime });
-        cloudTime.textContent = `Satellitenbild · ${new Intl.DateTimeFormat("de-DE", {
-          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin"
-        }).format(new Date(latestImageTime))} Uhr`;
-        cloudTime.title = "Aufnahmezeitpunkt des aktuellen EUMETSAT-Satellitenbilds";
-      } catch (error) {
-        cloudTime.textContent = "Satellitenbild gerade nicht verfügbar";
-        cloudTime.title = error.message;
-      } finally {
-        cloudLoading = false;
-      }
-    }
-
     async function loadRadarFrames() {
       if (!radarMap || radarLoading) return;
       radarLoading = true;
@@ -569,22 +533,9 @@
       radarMap = L.map("radar-map", { scrollWheelZoom: false, minZoom: 6, maxZoom: 18 });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
+        className: "radar-base-map",
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>'
       }).addTo(radarMap);
-      cloudLayer = L.tileLayer.wms("https://view.eumetsat.int/geoserver/ows", {
-        layers: "msg_fes:rgb_natural",
-        styles: "raster",
-        format: "image/png",
-        transparent: true,
-        version: "1.3.0",
-        opacity: 0.82,
-        attribution: '<a href="https://www.eumetsat.int/" target="_blank" rel="noreferrer">EUMETSAT</a>'
-      }).addTo(radarMap).on("tileerror", () => {
-        const cloudTime = document.querySelector("#cloud-time");
-        cloudTime.textContent = "Satellitenbild gerade nicht verfügbar";
-        cloudTime.title = "EUMETSAT-Satellitenkacheln konnten nicht geladen werden.";
-      });
-      L.control.layers(null, { "Satellitenbild (EUMETSAT)": cloudLayer }, { collapsed: false }).addTo(radarMap);
 
       const cityBounds = L.latLngBounds(cities.map((city) => [city.latitude, city.longitude]));
       cities.forEach((city) => {
@@ -607,7 +558,6 @@
         });
       });
       radarMap.fitBounds(cityBounds.pad(1.25), { padding: [30, 30], maxZoom: 9 });
-      updateCloudLayer();
       loadRadarFrames();
     }
 
@@ -652,12 +602,10 @@
     refreshButton.addEventListener("click", () => {
       loadWeather();
       loadRadarFrames();
-      updateCloudLayer();
     });
     initializeRadarMap();
     window.setInterval(loadRadarFrames, 5 * 60 * 1000);
     window.setInterval(loadWeather, 15 * 60 * 1000);
-    window.setInterval(updateCloudLayer, 5 * 60 * 1000);
     loadWeather();
   </script>
 </body>
