@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f4ee">
-  <title>Wetter an der Saale | Jena &amp; Rudolstadt</title>
+  <title>Königsinfo: Alles was man wissen muss</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
@@ -54,7 +54,9 @@
     .brand-mark i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
     .brand-mark i:nth-child(2) { background: var(--orange); }
     .brand-mark i:nth-child(3) { background: var(--blue); }
+    .brand-copy { display: grid; gap: 2px; }
     .brand-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
+    .brand-tagline { color: var(--muted); font-size: 9px; }
     .brand-place { color: var(--muted); font-family: var(--mono); font-size: 10px; }
 
     .live-indicator { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
@@ -227,9 +229,12 @@
 <body>
   <div class="page">
     <header class="topbar">
-      <div class="brand" aria-label="Saale Wetter">
+      <div class="brand" aria-label="Königsinfo: Alles was man wissen muss">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span class="brand-name">SAALWETTER</span>
+        <span class="brand-copy">
+          <span class="brand-name">Königsinfo</span>
+          <span class="brand-tagline">Alles was man wissen muss</span>
+        </span>
         <span class="brand-place">THÜRINGEN · DE</span>
       </div>
       <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
