@@ -57,19 +57,22 @@
     .brand-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
     .brand-place { color: var(--muted); font-family: var(--mono); font-size: 10px; }
 
-    .topbar-tools { display: flex; align-items: center; gap: 14px; }
     .live-indicator { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
     .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4a9467; box-shadow: 0 0 0 3px #e1eee3; }
-    .off-status-card { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); }
-    .off-status-copy { display: grid; gap: 2px; }
-    .off-status-title { color: var(--muted); font-size: 9px; text-decoration-thickness: 1px; text-underline-offset: 2px; }
-    .off-status-detail { color: var(--muted); font-family: var(--mono); font-size: 8px; }
-    .off-status-answer { min-width: 38px; color: #884932; font-family: var(--mono); font-size: 11px; font-weight: 700; text-align: center; }
+    .off-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 28px; padding: 23px 26px; border: 1px solid #d8dfd3; border-left: 4px solid var(--orange); border-radius: 5px; background: linear-gradient(110deg, #fff 0%, #f3f5ee 100%); }
+    .off-card-copy { min-width: 0; }
+    .off-card-kicker { margin: 0 0 5px; color: var(--orange); font-family: var(--mono); font-size: 9px; text-transform: uppercase; }
+    .off-card-title { margin: 0; font-family: var(--serif); font-size: 29px; font-weight: 500; line-height: 1.1; }
+    .off-card-recommendation { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .off-card-status { display: grid; flex: 0 0 auto; justify-items: center; gap: 3px; min-width: 112px; padding: 9px 15px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); }
+    .off-status-answer { color: #884932; font-family: var(--mono); font-size: 22px; font-weight: 700; line-height: 1.1; }
     .off-status-answer[data-open="true"] { color: var(--green); }
     .off-status-answer[data-open="false"] { color: #a44236; }
     .off-status-answer[data-open="unknown"] { color: var(--muted); }
+    .off-status-detail { color: var(--muted); font-family: var(--mono); font-size: 8px; text-align: center; }
 
     .intro { padding: 55px 0 27px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+    .off-card + .intro { padding-top: 35px; }
     .eyebrow { margin: 0 0 11px; color: var(--green); font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
     h1 { margin: 0; font-family: var(--serif); font-size: 52px; font-weight: 500; line-height: 1; letter-spacing: 0; }
     .intro-copy { max-width: 300px; margin: 15px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
@@ -178,6 +181,9 @@
 
     @media (max-width: 760px) {
       .page { padding: 0 20px 42px; }
+      .off-card { gap: 14px; margin-top: 20px; padding: 19px 17px; }
+      .off-card-title { font-size: 25px; }
+      .off-card-status { min-width: 92px; padding: 8px 10px; }
       .intro { padding-top: 42px; }
       h1 { font-size: 44px; }
       .city-grid { grid-template-columns: 1fr; gap: 11px; }
@@ -191,9 +197,11 @@
       .page { padding-right: 15px; padding-left: 15px; }
       .topbar { min-height: 60px; }
       .brand-place { display: none; }
-      .topbar { flex-wrap: wrap; row-gap: 8px; padding: 8px 0; }
-      .topbar-tools { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-      .off-status-card { padding: 6px 8px; }
+      .off-card { align-items: flex-start; gap: 10px; margin-top: 16px; padding: 17px 13px; }
+      .off-card-title { font-size: 23px; }
+      .off-card-recommendation { font-size: 11px; }
+      .off-card-status { min-width: 74px; padding: 8px 7px; }
+      .off-status-answer { font-size: 19px; }
       .intro { display: block; padding: 35px 0 19px; }
       h1 { font-size: 40px; }
       .intro-copy { max-width: 270px; margin-top: 10px; }
@@ -224,19 +232,22 @@
         <span class="brand-name">SAALWETTER</span>
         <span class="brand-place">THÜRINGEN · DE</span>
       </div>
-      <div class="topbar-tools">
-        <aside class="off-status-card" aria-label="Öffnungsstatus der Kneipe Off in Jena">
-          <div class="off-status-copy">
-            <a class="off-status-title" href="https://www.openstreetmap.org/node/2313564757" target="_blank" rel="noreferrer" title="Eingetragene Öffnungszeiten bei OpenStreetMap">Hat das OFF off?</a>
-            <span class="off-status-detail" id="off-status-detail">Öffnungszeiten werden geladen …</span>
-          </div>
-          <span class="off-status-answer" id="off-status-answer" data-open="unknown" aria-live="polite">—</span>
-        </aside>
-        <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
-      </div>
+      <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
     </header>
 
     <main>
+      <aside class="off-card" aria-labelledby="off-card-title">
+        <div class="off-card-copy">
+          <p class="off-card-kicker">Jena · Wetterplan</p>
+          <p class="off-card-title" id="off-card-title">Hat das OFF off?</p>
+          <p class="off-card-recommendation" id="off-recommendation" aria-live="polite">Wetter für Jena wird geladen …</p>
+        </div>
+        <div class="off-card-status" aria-label="Aktueller Öffnungsstatus">
+          <span class="off-status-answer" id="off-status-answer" data-open="unknown" aria-live="polite">—</span>
+          <span class="off-status-detail" id="off-status-detail">Öffnungszeiten werden geladen …</span>
+        </div>
+      </aside>
+
       <section class="intro" aria-labelledby="page-title">
         <div>
           <h1 id="page-title">Wetter an der Saale</h1>
@@ -422,6 +433,27 @@
       detail.textContent = activeInterval
         ? `Offen bis ${changeHour}:${changeMinutes} Uhr`
         : `Öffnet ${germanWeekdays[changeDay]} um ${changeHour}:${changeMinutes} Uhr`;
+      updateOffRecommendation();
+    }
+
+    function updateOffRecommendation(weatherCode) {
+      const recommendation = document.querySelector("#off-recommendation");
+      const currentCode = weatherCode ?? latestWeather.jena?.current?.weather_code;
+      if (!Number.isFinite(currentCode)) {
+        recommendation.textContent = "Wetter für Jena wird geladen …";
+        return;
+      }
+
+      const isOpen = document.querySelector("#off-status-answer").dataset.open === "true";
+      if ([0, 1, 2].includes(currentCode)) {
+        recommendation.textContent = "Sonne in Jena – genießt das Wetter draußen an der Saale!";
+      } else if (currentCode === 3) {
+        recommendation.textContent = "Bewölkt in Jena – OFF oder Saale? Ihr habt die Wahl.";
+      } else {
+        recommendation.textContent = isOpen
+          ? "Schietwetter in Jena – das OFF hat offen. Ab nach drinnen!"
+          : "Schietwetter in Jena – das OFF ist gerade zu.";
+      }
     }
 
     function weatherInfo(code) {
@@ -450,6 +482,7 @@
       panel.querySelector('[data-field="range"]').textContent = `${temperature(data.daily.temperature_2m_max[todayIndex])} / ${temperature(data.daily.temperature_2m_min[todayIndex])}`;
       panel.querySelector('[data-field="wind"]').textContent = `${Math.round(current.wind_speed_10m)} km/h`;
       panel.querySelector('[data-field="humidity"]').textContent = `${current.relative_humidity_2m} %`;
+      if (city.id === "jena") updateOffRecommendation(current.weather_code);
 
       const firstHour = Math.max(0, data.hourly.time.findIndex((time) => new Date(time) >= new Date(current.time)));
       const hourlyItems = data.hourly.time.slice(firstHour, firstHour + 5).map((time, offset) => {
@@ -528,6 +561,9 @@
             panel.classList.remove("loading");
             panel.setAttribute("aria-busy", "false");
             panel.querySelector('[data-field="condition"]').textContent = "Daten gerade nicht verfügbar";
+            if (city.id === "jena" && !latestWeather.jena) {
+              document.querySelector("#off-recommendation").textContent = "Wetterdaten für Jena gerade nicht verfügbar.";
+            }
           }
         });
         if (errors === cities.length) {
