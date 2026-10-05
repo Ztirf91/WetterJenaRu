@@ -57,8 +57,17 @@
     .brand-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
     .brand-place { color: var(--muted); font-family: var(--mono); font-size: 10px; }
 
+    .topbar-tools { display: flex; align-items: center; gap: 14px; }
     .live-indicator { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
     .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4a9467; box-shadow: 0 0 0 3px #e1eee3; }
+    .off-status-card { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--white); }
+    .off-status-copy { display: grid; gap: 2px; }
+    .off-status-title { color: var(--muted); font-size: 9px; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    .off-status-detail { color: var(--muted); font-family: var(--mono); font-size: 8px; }
+    .off-status-answer { min-width: 38px; color: #884932; font-family: var(--mono); font-size: 11px; font-weight: 700; text-align: center; }
+    .off-status-answer[data-open="true"] { color: var(--green); }
+    .off-status-answer[data-open="false"] { color: #a44236; }
+    .off-status-answer[data-open="unknown"] { color: var(--muted); }
 
     .intro { padding: 55px 0 27px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
     .eyebrow { margin: 0 0 11px; color: var(--green); font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
@@ -182,6 +191,9 @@
       .page { padding-right: 15px; padding-left: 15px; }
       .topbar { min-height: 60px; }
       .brand-place { display: none; }
+      .topbar { flex-wrap: wrap; row-gap: 8px; padding: 8px 0; }
+      .topbar-tools { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+      .off-status-card { padding: 6px 8px; }
       .intro { display: block; padding: 35px 0 19px; }
       h1 { font-size: 40px; }
       .intro-copy { max-width: 270px; margin-top: 10px; }
@@ -212,7 +224,16 @@
         <span class="brand-name">SAALWETTER</span>
         <span class="brand-place">THÜRINGEN · DE</span>
       </div>
-      <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
+      <div class="topbar-tools">
+        <aside class="off-status-card" aria-label="Öffnungsstatus der Kneipe Off in Jena">
+          <div class="off-status-copy">
+            <a class="off-status-title" href="https://www.openstreetmap.org/node/2313564757" target="_blank" rel="noreferrer" title="Eingetragene Öffnungszeiten bei OpenStreetMap">Hat das OFF off?</a>
+            <span class="off-status-detail" id="off-status-detail">Öffnungszeiten werden geladen …</span>
+          </div>
+          <span class="off-status-answer" id="off-status-answer" data-open="unknown" aria-live="polite">—</span>
+        </aside>
+        <div class="live-indicator"><span class="live-dot" aria-hidden="true"></span><span id="live-status" aria-live="polite">Wetterdaten werden geladen</span></div>
+      </div>
     </header>
 
     <main>
@@ -344,6 +365,64 @@
     let weatherLoading = false;
     const liveStatus = document.querySelector("#live-status");
     const refreshButton = document.querySelector("#refresh-button");
+    const offOpeningHours = [
+      { day: 0, open: 17 * 60, close: 24 * 60 },
+      { day: 1, open: 17 * 60, close: 24 * 60 },
+      { day: 2, open: 17 * 60, close: 24 * 60 },
+      { day: 3, open: 17 * 60, close: 25 * 60 },
+      { day: 4, open: 19 * 60, close: 27 * 60 },
+      { day: 5, open: 19 * 60, close: 27 * 60 }
+    ];
+    const weekMinutes = 7 * 24 * 60;
+    const germanWeekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+    function updateOffStatus(now = new Date()) {
+      const timeParts = new Intl.DateTimeFormat("de-DE", {
+        timeZone: "Europe/Berlin",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      }).formatToParts(now);
+      const weekday = timeParts.find((part) => part.type === "weekday")?.value.replace(".", "");
+      const dayIndex = { Mo: 0, Di: 1, Mi: 2, Do: 3, Fr: 4, Sa: 5, So: 6 }[weekday];
+      const hour = Number(timeParts.find((part) => part.type === "hour")?.value);
+      const minute = Number(timeParts.find((part) => part.type === "minute")?.value);
+      const currentMinute = dayIndex * 24 * 60 + hour * 60 + minute;
+      const intervals = offOpeningHours.flatMap(({ day, open, close }) => {
+        const start = day * 24 * 60 + open;
+        const end = day * 24 * 60 + close;
+        return [-1, 0, 1].map((weekOffset) => ({
+          start: start + weekOffset * weekMinutes,
+          end: end + weekOffset * weekMinutes
+        }));
+      });
+      const activeInterval = intervals.find(({ start, end }) => currentMinute >= start && currentMinute < end);
+      const nextChange = intervals
+        .flatMap(({ start, end }) => [start, end])
+        .filter((change) => change > currentMinute)
+        .sort((a, b) => a - b)[0];
+      const answer = document.querySelector("#off-status-answer");
+      const detail = document.querySelector("#off-status-detail");
+
+      if (dayIndex === undefined || !Number.isFinite(hour) || !Number.isFinite(minute) || !nextChange) {
+        answer.textContent = "—";
+        answer.dataset.open = "unknown";
+        detail.textContent = "Status nicht verfügbar";
+        return;
+      }
+
+      const changeMinuteOfWeek = ((nextChange % weekMinutes) + weekMinutes) % weekMinutes;
+      const changeDay = Math.floor(changeMinuteOfWeek / (24 * 60));
+      const changeTime = changeMinuteOfWeek % (24 * 60);
+      const changeHour = String(Math.floor(changeTime / 60)).padStart(2, "0");
+      const changeMinutes = String(changeTime % 60).padStart(2, "0");
+      answer.textContent = activeInterval ? "JA" : "NEIN";
+      answer.dataset.open = String(Boolean(activeInterval));
+      detail.textContent = activeInterval
+        ? `Offen bis ${changeHour}:${changeMinutes} Uhr`
+        : `Öffnet ${germanWeekdays[changeDay]} um ${changeHour}:${changeMinutes} Uhr`;
+    }
 
     function weatherInfo(code) {
       return weatherDescriptions[code] || ["Wetterlage", "☁"];
@@ -591,6 +670,8 @@
     document.querySelector("#today-label").textContent = new Intl.DateTimeFormat("de-DE", {
       weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin"
     }).format(new Date());
+    updateOffStatus();
+    window.setInterval(updateOffStatus, 60 * 1000);
 
     document.querySelectorAll(".unit-button").forEach((button) => {
       button.addEventListener("click", () => {
