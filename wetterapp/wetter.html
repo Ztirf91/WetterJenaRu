@@ -274,15 +274,15 @@
 
       <section class="radar-section" aria-labelledby="radar-title">
         <div class="section-heading">
-          <div><p class="section-kicker">Niederschlag in Bewegung</p><h2 id="radar-title">Regenradar</h2></div>
+          <div><p class="section-kicker">Wolken und Niederschlag in Bewegung</p><h2 id="radar-title">Wolken- &amp; Regenradar</h2></div>
           <button class="radar-play-button" id="radar-play" type="button" disabled aria-label="Radarverlauf abspielen">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path id="radar-play-icon" d="M8 5v14l11-7z"/></svg>
             <span id="radar-play-label">Abspielen</span>
           </button>
         </div>
-        <p class="radar-intro">Beobachte die Niederschlagsbewegung der letzten zwei Stunden über Jena und Rudolstadt.</p>
+        <p class="radar-intro">Satelliten-Wolkenbild und Niederschlagsbewegung über Jena und Rudolstadt. In der Wolkenmaske zeigen weiße Flächen Wolken; grün und blau stehen für wolkenfreien Himmel. Wolkenbilder werden etwa alle 15 Minuten, Radar- und Wetterdaten alle 5 bis 15 Minuten aktualisiert.</p>
         <div class="radar-map-shell">
-          <div class="radar-map" id="radar-map" role="region" aria-label="Regenradar-Karte für Jena und Rudolstadt"></div>
+          <div class="radar-map" id="radar-map" role="region" aria-label="Wolken- und Regenradar-Karte für Jena und Rudolstadt"></div>
           <div class="radar-map-status" id="radar-status" role="status" aria-live="polite">Radar wird geladen …</div>
         </div>
         <div class="radar-controls">
@@ -294,7 +294,7 @@
               <span><i class="radar-legend-dot" aria-hidden="true"></i>Jena</span>
               <span><i class="radar-legend-dot" aria-hidden="true"></i>Rudolstadt</span>
             </div>
-            <span class="radar-source">Karte © OpenStreetMap-Mitwirkende · Radar <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a></span>
+            <span class="radar-source">Karte © OpenStreetMap-Mitwirkende · Radar <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">RainViewer</a> · Wolken <a href="https://www.eumetsat.int/" target="_blank" rel="noreferrer">EUMETSAT</a></span>
           </div>
         </div>
       </section>
@@ -338,6 +338,10 @@
     let radarIndex = 0;
     let radarPlayback = null;
     let radarHost = "";
+    let radarLoading = false;
+    let radarFollowingLatest = true;
+    let weatherLoading = false;
+    let cloudLayer = null;
     const liveStatus = document.querySelector("#live-status");
     const refreshButton = document.querySelector("#refresh-button");
 
@@ -421,38 +425,44 @@
         timezone: "Europe/Berlin",
         wind_speed_unit: "kmh"
       });
-      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { cache: "no-store" });
       if (!response.ok) throw new Error(`Wetterdienst antwortet mit Status ${response.status}.`);
       return response.json();
     }
 
     async function loadWeather() {
+      if (weatherLoading) return;
+      weatherLoading = true;
       refreshButton.disabled = true;
       liveStatus.textContent = "Wetterdaten werden geladen";
-      const results = await Promise.allSettled(cities.map(fetchCity));
-      let errors = 0;
-      results.forEach((result, index) => {
-        const city = cities[index];
-        const panel = document.querySelector(`[data-city="${city.id}"]`);
-        if (result.status === "fulfilled") {
-          latestWeather[city.id] = result.value;
-          renderCity(city, result.value);
+      try {
+        const results = await Promise.allSettled(cities.map(fetchCity));
+        let errors = 0;
+        results.forEach((result, index) => {
+          const city = cities[index];
+          const panel = document.querySelector(`[data-city="${city.id}"]`);
+          if (result.status === "fulfilled") {
+            latestWeather[city.id] = result.value;
+            renderCity(city, result.value);
+          } else {
+            errors += 1;
+            panel.classList.remove("loading");
+            panel.setAttribute("aria-busy", "false");
+            panel.querySelector('[data-field="condition"]').textContent = "Daten gerade nicht verfügbar";
+          }
+        });
+        if (errors === cities.length) {
+          liveStatus.textContent = "Keine Verbindung";
+          document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Wetterdaten konnten nicht geladen werden. Bitte prüfe deine Internetverbindung und versuche es erneut.</p>';
         } else {
-          errors += 1;
-          panel.classList.remove("loading");
-          panel.setAttribute("aria-busy", "false");
-          panel.querySelector('[data-field="condition"]').textContent = "Daten gerade nicht verfügbar";
+          liveStatus.textContent = errors ? "Teilweise aktualisiert" : "Live aktualisiert";
+          document.querySelector("#updated-at").textContent = `Zuletzt aktualisiert · ${new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }).format(new Date())} Uhr`;
+          if (errors) document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Vorhersage für beide Städte ist gerade nicht verfügbar.</p>';
         }
-      });
-      if (errors === cities.length) {
-        liveStatus.textContent = "Keine Verbindung";
-        document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Wetterdaten konnten nicht geladen werden. Bitte prüfe deine Internetverbindung und versuche es erneut.</p>';
-      } else {
-        liveStatus.textContent = errors ? "Teilweise aktualisiert" : "Live aktualisiert";
-        document.querySelector("#updated-at").textContent = `Zuletzt aktualisiert · ${new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }).format(new Date())} Uhr`;
-        if (errors) document.querySelector("#forecast-table").innerHTML = '<p class="error-message">Die Vorhersage für beide Städte ist gerade nicht verfügbar.</p>';
+      } finally {
+        weatherLoading = false;
+        refreshButton.disabled = false;
       }
-      refreshButton.disabled = false;
     }
 
     function setRadarStatus(message, hidden = false) {
@@ -488,10 +498,19 @@
       }
     }
 
+    function updateCloudLayer() {
+      if (!cloudLayer) return;
+      const interval = 15 * 60 * 1000;
+      const latestQuarterHour = new Date(Math.floor(Date.now() / interval) * interval).toISOString();
+      cloudLayer.setParams({ time: latestQuarterHour });
+    }
+
     async function loadRadarFrames() {
-      if (!radarMap) return;
+      if (!radarMap || radarLoading) return;
+      radarLoading = true;
+      updateCloudLayer();
       try {
-        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        const response = await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" });
         if (!response.ok) throw new Error(`Radar-API antwortet mit Status ${response.status}.`);
         const data = await response.json();
         const frames = data.radar?.past;
@@ -505,9 +524,11 @@
         timeline.max = String(frames.length - 1);
         timeline.disabled = false;
         document.querySelector("#radar-play").disabled = frames.length < 2;
-        setRadarFrame(frames.length - 1);
+        setRadarFrame(radarFollowingLatest ? frames.length - 1 : Math.min(radarIndex, frames.length - 1));
       } catch (error) {
         setRadarStatus("Regenradar gerade nicht verfügbar. Bitte später erneut versuchen.");
+      } finally {
+        radarLoading = false;
       }
     }
 
@@ -522,6 +543,19 @@
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>'
       }).addTo(radarMap);
+      cloudLayer = L.tileLayer.wms("https://view.eumetsat.int/geoserver/ows", {
+        layers: "msg_fes:clm",
+        styles: "msg_clm",
+        format: "image/png",
+        transparent: true,
+        version: "1.3.0",
+        time: new Date(Math.floor(Date.now() / (15 * 60 * 1000)) * (15 * 60 * 1000)).toISOString(),
+        opacity: 0.5,
+        attribution: '<a href="https://www.eumetsat.int/" target="_blank" rel="noreferrer">EUMETSAT</a>'
+      }).addTo(radarMap).on("tileerror", () => {
+        setRadarStatus("Satelliten-Wolken gerade nicht verfügbar. Regenradar wird unabhängig aktualisiert.");
+      });
+      L.control.layers(null, { "Satelliten-Wolken": cloudLayer }, { collapsed: false }).addTo(radarMap);
 
       const cityBounds = L.latLngBounds(cities.map((city) => [city.latitude, city.longitude]));
       cities.forEach((city) => {
@@ -548,7 +582,9 @@
     }
 
     document.querySelector("#radar-timeline").addEventListener("input", (event) => {
-      setRadarFrame(Number(event.target.value));
+      radarIndex = Number(event.target.value);
+      radarFollowingLatest = radarIndex === radarFrames.length - 1;
+      setRadarFrame(radarIndex);
     });
     document.querySelector("#radar-play").addEventListener("click", (event) => {
       const button = event.currentTarget;
@@ -588,7 +624,8 @@
       loadRadarFrames();
     });
     initializeRadarMap();
-    window.setInterval(loadRadarFrames, 10 * 60 * 1000);
+    window.setInterval(loadRadarFrames, 5 * 60 * 1000);
+    window.setInterval(loadWeather, 15 * 60 * 1000);
     loadWeather();
   </script>
 </body>
